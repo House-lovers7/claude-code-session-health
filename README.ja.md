@@ -34,13 +34,40 @@ cacheRead  284.7M   <- 全トークンの95%
 | **statusline** | 任意設定（下記） | `📜req56·120x` → `🟡` → `🔥req231·246x ⚠️/compact` |
 | **Stop通知** | 任意設定（下記） | 応答完了通知に ` \| cut point: req231 / re-read 246x -> /compact` が付く |
 
-さらに `/usage-report` で **プロジェクト×セッション×サブエージェント×モデル**
+さらに `/session-health:usage-report` で **プロジェクト×セッション×サブエージェント×モデル**
 の4軸トークン内訳を出せます。requestId ベースの重複排除つき（ストリーミングは
 1リクエストを複数JSONL行に書くため、素朴に合計すると2〜3倍水増しされます）。
 サブエージェントのトランスクリプト（`<セッション>/subagents/` 配下の別ファイル。
 見落とすと「委譲ゼロ」という誤結論になる）も集計対象です。
 
 すべてローカルのトランスクリプトファイルだけで動きます。**外部送信は一切ありません。**
+
+## セキュリティ / このプラグインが追加するもの
+
+Claude Code のプラグインは commands / hooks / agents / MCP servers を追加できる
+強力な仕組みです。個人リポジトリのプラグインを警戒するのは正しい感覚なので、
+このプラグインが何を追加するかを明示します。
+
+追加するもの:
+
+- slash command: `/session-health:usage-report`
+- `UserPromptSubmit` hook: `scripts/session_health.py hook`
+
+追加しないもの:
+
+- MCP server
+- 外部API連携
+- 常駐daemon
+- ネットワーク送信
+- Python標準ライブラリ以外の依存
+
+解析対象はローカルの Claude Code transcript（`~/.claude/projects/`）だけです。
+外部送信はしません。
+
+信用より検証で判断したい場合は、まず [`hooks/hooks.json`](hooks/hooks.json)
+（Claude Code がどのタイミングで何を実行するかの宣言）を読み、次に
+[`scripts/`](scripts/) の2スクリプトと
+[`commands/usage-report.md`](commands/usage-report.md) を確認してください。
 
 ## インストール
 
@@ -49,7 +76,7 @@ cacheRead  284.7M   <- 全トークンの95%
 /plugin install session-health@house-lovers7
 ```
 
-フックと `/usage-report` は即座に有効。任意の2つ:
+フックと `/session-health:usage-report` は即座に有効。任意の2つ:
 
 **statusline** — [`scripts/statusline-example.sh`](scripts/statusline-example.sh)
 を参照。既存の statusline スクリプトなら1行追加:

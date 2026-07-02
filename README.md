@@ -36,13 +36,39 @@ One detection engine (`scripts/session_health.py`), three surfaces:
 | **Statusline** | optional, see below | `📜req56·120x` → `🟡` → `🔥req231·246x ⚠️/compact` |
 | **Stop notification** | optional, see below | your "response done" notification gains ` \| cut point: req231 / re-read 246x -> /compact` |
 
-Plus `/usage-report`: a token breakdown of the last day across
+Plus `/session-health:usage-report`: a token breakdown of the last day across
 **project × session × subagent × model**, with request-level deduplication
 (streaming writes each request as multiple JSONL records — naive summing
 double-counts 2–3x) and subagent transcripts included (they live in separate
 files under `<session>/subagents/`; miss them and delegation looks like zero).
 
 Everything runs on local transcript files. **Nothing leaves your machine.**
+
+## Security / What this installs
+
+Claude Code plugins are powerful — they can add commands, hooks, agents, and
+MCP servers, so being wary of a plugin from a personal repository is the
+correct instinct. Here is exactly what this one adds.
+
+This plugin installs:
+
+- one slash command: `/session-health:usage-report`
+- one `UserPromptSubmit` hook that runs `scripts/session_health.py hook`
+
+It does not install:
+
+- MCP servers
+- external integrations
+- background daemons
+- network calls
+- dependencies outside the Python standard library
+
+All analysis is performed on local Claude Code transcript files under
+`~/.claude/projects/`. Nothing leaves your machine.
+
+If you'd rather verify than trust: read [`hooks/hooks.json`](hooks/hooks.json)
+first — it declares exactly when Claude Code runs what — then the two scripts
+under [`scripts/`](scripts/) and [`commands/usage-report.md`](commands/usage-report.md).
 
 ## Install
 
@@ -51,7 +77,7 @@ Everything runs on local transcript files. **Nothing leaves your machine.**
 /plugin install session-health@house-lovers7
 ```
 
-The hook and `/usage-report` work immediately. Two optional surfaces:
+The hook and `/session-health:usage-report` work immediately. Two optional surfaces:
 
 **Statusline** — see [`scripts/statusline-example.sh`](scripts/statusline-example.sh),
 or add one line to your existing statusline script:

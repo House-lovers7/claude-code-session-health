@@ -94,6 +94,41 @@ ccusage（コストレポート）や Claude HUD(コンテキスト可視化)な
 反例歓迎）。「最も安い介入点はダッシュボードではなくモデル自身の行動」が
 このプラグインの賭けどころ。
 
+## インストールが怖い人向け: このプラグインが追加するもの
+
+Claude Code のプラグインは強力です。commands / hooks / agents / MCP servers
+などを追加できるため、よくわからないプラグインを入れるのは普通に怖いと
+思います。私もそう思います。
+
+なので、このプラグインが何を追加するかを明示しておきます。
+
+`session-health` が追加するものは主に2つです。
+
+1. `/session-health:usage-report`
+   - ローカルの `~/.claude/projects/` 配下にある Claude Code transcript を読み、token usage を集計する slash command
+   - 集計軸は `project × session × subagent × model`
+   - 外部送信はしません
+
+2. `UserPromptSubmit` hook
+   - プロンプト送信時に、現在のセッション状態をローカル transcript から読む
+   - 閾値を超えている場合だけ、短い `additionalContext` をモデルに注入する
+   - 目的は「次の区切りで /compact か新セッションを提案せよ」とモデルに知らせることです
+
+このプラグインは MCP server を追加しません。外部APIにも送信しません。
+Python標準ライブラリだけで動きます。
+
+不安な場合は、インストール前にリポジトリ内の以下だけ確認してください。
+
+- `.claude-plugin/plugin.json`
+- `.claude-plugin/marketplace.json`
+- `hooks/hooks.json`
+- `commands/usage-report.md`
+- `scripts/session_health.py`
+- `scripts/usage_report.py`
+
+特に見るべきなのは `hooks/hooks.json` です。ここに、Claude Code がどの
+タイミングで何を実行するかが書かれています。
+
 ## 使い方
 
 ```
@@ -101,7 +136,7 @@ ccusage（コストレポート）や Claude HUD(コンテキスト可視化)な
 /plugin install session-health@house-lovers7
 ```
 
-フックと `/usage-report`（4軸内訳の slash command）は即有効。statusline と
+フックと `/session-health:usage-report`（4軸内訳の slash command）は即有効。statusline と
 通知の接続はREADME参照。すべてローカル完結で外部送信なし、閾値は環境変数で
 調整可能。
 
