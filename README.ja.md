@@ -113,6 +113,49 @@ notify "応答完了$extra"
 に勝ちます。閾値トリガーの自己是正をやっているツールは調査した範囲では
 存在しませんでした（2026年7月時点の調査。反例は Issue で歓迎します）。
 
+## サンプル出力（マスク済み）
+
+`/session-health:usage-report` の実出力（プロジェクト名・セッション名はマスク）:
+
+```
+since 2026-07-01T19:00:00Z (local 07/02 04:00)  deduplicated away: 516.5M tok
+
+== By project ==
+                                     in      out   cacheRd   cacheCr   req
+project-a                        176.0k   254.4k     58.6M      1.5M   371
+project-b                        167.8k   197.9k     47.2M      1.7M   396
+project-c                         92.0k   134.2k     39.3M      1.2M   202
+...
+
+== Top 15 sessions ==
+project-a/session-01             176.0k   254.4k     58.6M      1.5M   371
+      models=fable-5 cacheRd/out=231x retry=2 apiErr=3
+project-b/session-02             125.3k   165.7k     45.2M      1.3M   354
+      models=fable-5,opus-4-8 cacheRd/out=273x
+...
+
+== By agent ==
+main                             779.8k     1.5M    312.6M      8.6M  1717
+Explore                          440.2k    42.2k     14.7M      2.4M   454
+general-purpose                  219.9k    50.1k     11.3M      1.7M   221
+routine-worker                     4.4k     7.9k      3.6M    557.3k    81
+Plan                              69.0k     5.5k      3.2M    408.7k    79
+
+Health: cache re-reads 95% of all tokens (lower is better) /
+main-thread share 89% (delegation keeps this moderate)
+```
+
+## 現状と限界
+
+- **定量的な削減効果は未検証です。** フックは発火し、モデルは実際に /compact
+  や委譲を提案し始めますが、閉ループ運用で cacheRead/output 比が実際に
+  どれだけ下がるかの before/after データはまだありません。第1報は計測手法と
+  仕組みの共有で、改善データは第2報として出す予定です。
+- 解析は非公開のトランスクリプト内部仕様（JSONL のレコード形状、`subagents/`
+  の配置）に依存します。2026-07-02 時点の Claude Code で検証済みで、将来の
+  更新で修正が必要になる可能性があります。
+- 閾値は私のワークロードに合わせた既定値です。環境変数で調整してください。
+
 ## 動作要件
 
 - プラグイン対応の Claude Code

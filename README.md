@@ -8,6 +8,13 @@ in your statusline and notifications.
 
 日本語版は [README.ja.md](README.ja.md) へ。
 
+**At a glance**
+
+- Measured: one full day of real work (2026-07-02, 12 projects, 2,592 deduplicated requests) — **95% of all tokens were cache reads**, output was 0.4%
+- Root cause: session length — worst sessions ran at a 231–313x cacheRead/output ratio
+- Mechanism: threshold detection → `additionalContext` injection → the model itself starts proposing `/compact` and delegating
+- Status: the closed loop is live in my environment; **quantitative before/after improvement is not yet measured** (follow-up planned)
+
 ## The problem
 
 Prompt caching in Claude Code is automatic and cheap per token — but every
@@ -115,6 +122,52 @@ is that the cheapest intervention point is **the model's own behavior** — an
 injected instruction at the right moment beats a dashboard you stop looking
 at. To my knowledge no existing tool does threshold-triggered self-correction
 (survey as of 2026-07; happy to be corrected via issues).
+
+## Sample output (masked)
+
+`/session-health:usage-report`, project names and session slugs masked:
+
+```
+since 2026-07-01T19:00:00Z (local 07/02 04:00)  deduplicated away: 516.5M tok
+
+== By project ==
+                                     in      out   cacheRd   cacheCr   req
+project-a                        176.0k   254.4k     58.6M      1.5M   371
+project-b                        167.8k   197.9k     47.2M      1.7M   396
+project-c                         92.0k   134.2k     39.3M      1.2M   202
+...
+
+== Top 15 sessions ==
+project-a/session-01             176.0k   254.4k     58.6M      1.5M   371
+      models=fable-5 cacheRd/out=231x retry=2 apiErr=3
+project-b/session-02             125.3k   165.7k     45.2M      1.3M   354
+      models=fable-5,opus-4-8 cacheRd/out=273x
+...
+
+== By agent ==
+main                             779.8k     1.5M    312.6M      8.6M  1717
+Explore                          440.2k    42.2k     14.7M      2.4M   454
+general-purpose                  219.9k    50.1k     11.3M      1.7M   221
+routine-worker                     4.4k     7.9k      3.6M    557.3k    81
+Plan                              69.0k     5.5k      3.2M    408.7k    79
+
+Health: cache re-reads 95% of all tokens (lower is better — the payoff
+metric for shorter sessions) / main-thread share 89% (delegation keeps
+this moderate)
+```
+
+## Status & limitations
+
+- **The quantitative effect is not yet measured.** The hook fires and the
+  model does start proposing `/compact` and delegation, but I don't yet have
+  before/after data showing how much the cacheRead/output ratio actually
+  drops under the closed loop. A follow-up with that data is planned; this
+  first release shares the measurement method and the mechanism.
+- The analysis relies on undocumented transcript internals (JSONL record
+  shape, the `subagents/` layout). Verified against Claude Code as of
+  2026-07-02; a future Claude Code update may require changes here.
+- Thresholds are defaults that worked for my workload — tune them via the
+  environment variables above.
 
 ## Requirements
 
