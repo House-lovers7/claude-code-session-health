@@ -12,15 +12,16 @@ in your statusline and notifications.
 
 Prompt caching in Claude Code is automatic and cheap per token — but every
 request re-reads the entire cached context. Run one session for a few hours
-and the numbers look like this (measured on a real day of work, 12 projects):
+and the numbers look like this (one full day of real work: 2026-07-02,
+12 projects, 2,592 deduplicated requests):
 
 ```
-input      736k
-output     1.4M
-cacheRead  284.7M   <- 95% of all tokens
+input      1.5M
+output     1.6M
+cacheRead  347M   <- 95% of all tokens
 ```
 
-The worst sessions had a **cacheRead/output ratio of 200–300x**. A statusline
+The worst sessions ran at a **231–313x cacheRead/output ratio**. A statusline
 warning alone didn't change behavior (mine was ignored past 2x the threshold).
 What worked was making the *model* aware: once the session crosses a
 threshold, every prompt carries an injected instruction to wrap up, compact,
