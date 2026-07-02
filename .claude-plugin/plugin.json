@@ -1,0 +1,20 @@
+{
+  "name": "session-health",
+  "version": "0.1.0",
+  "description": "Detects token-wasting Claude Code sessions (context re-read bloat) and closes the loop: nudges the model to compact & delegate, and surfaces 'time to cut' in your statusline and notifications.",
+  "author": {
+    "name": "Taisuke Goto",
+    "url": "https://github.com/House-lovers7"
+  },
+  "homepage": "https://github.com/House-lovers7/claude-code-session-health",
+  "repository": "https://github.com/House-lovers7/claude-code-session-health",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "tokens",
+    "usage",
+    "prompt-caching",
+    "hooks",
+    "statusline"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "house-lovers7",
+  "owner": {
+    "name": "Taisuke Goto",
+    "url": "https://github.com/House-lovers7"
+  },
+  "plugins": [
+    {
+      "name": "session-health",
+      "source": "./",
+      "description": "Detects token-wasting Claude Code sessions (context re-read bloat) and closes the loop: nudges the model to compact & delegate, and surfaces 'time to cut' in your statusline and notifications."
+    }
+  ]
+}
