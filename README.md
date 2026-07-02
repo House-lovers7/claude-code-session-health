@@ -52,6 +52,20 @@ files under `<session>/subagents/`; miss them and delegation looks like zero).
 
 Everything runs on local transcript files. **Nothing leaves your machine.**
 
+## Performance notes
+
+Full usage reports scan local Claude Code transcript files under
+`~/.claude/projects/`, including subagent transcripts, and can take time on
+large histories. For faster checks, narrow the scan:
+
+```bash
+python3 scripts/usage_report.py --project agent-company-os
+python3 scripts/usage_report.py --current ~/.claude/projects/.../session.jsonl
+python3 scripts/usage_report.py --transcript ~/.claude/projects/.../session.jsonl
+```
+
+Future work may add an incremental cache for repeated full reports.
+
 ## Security / What this installs
 
 Claude Code plugins are powerful — they can add commands, hooks, agents, and

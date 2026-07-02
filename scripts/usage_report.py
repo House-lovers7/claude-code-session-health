@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Token usage breakdown for Claude Code: project x session x agent x model.
 
-usage: python3 usage_report.py [since_iso]
+usage: python3 usage_report.py [since_iso] [--project NAME]
+       python3 usage_report.py [since_iso] --transcript PATH
+       python3 usage_report.py [since_iso] --current PATH
   since_iso  ISO-8601 start time, e.g. 2026-07-02T04:00:00+09:00.
              Defaults to today 04:00 local time.
 
@@ -15,15 +17,43 @@ multiple JSONL records, so naive summing double-counts by 2-3x.
 
 Local file reads only. Nothing leaves the machine.
 """
+import argparse
 import glob
 import json
 import os
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 FIELDS = ["input_tokens", "output_tokens", "cache_read_input_tokens",
           "cache_creation_input_tokens"]
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Token usage breakdown for Claude Code transcripts.",
+    )
+    parser.add_argument(
+        "since_iso",
+        nargs="?",
+        help=("ISO-8601 start time, e.g. 2026-07-02T04:00:00+09:00. "
+              "Defaults to today 04:00 local time."),
+    )
+    parser.add_argument(
+        "--project",
+        help="Only scan project directories whose encoded name contains this value.",
+    )
+    transcript_group = parser.add_mutually_exclusive_group()
+    transcript_group.add_argument(
+        "--transcript",
+        help="Only scan the specified JSONL transcript file.",
+    )
+    transcript_group.add_argument(
+        "--current",
+        help="Alias for --transcript, intended for current-session checks.",
+    )
+    return parser.parse_args(argv)
 
 
 def default_since() -> datetime:
@@ -51,9 +81,48 @@ def short_project(dirname: str) -> str:
     return dirname
 
 
+def line_might_matter(line: str) -> bool:
+    if '"assistant"' in line and '"usage"' in line:
+        return True
+    # Keep existing session notes accurate without parsing unrelated records.
+    return '"retryAttempt"' in line or '"isApiErrorMessage"' in line
+
+
+def transcript_paths(root: str, project_filter: str = None, transcript: str = None):
+    if transcript:
+        return [os.path.expanduser(transcript)]
+
+    project_pattern = os.path.join(root, "*")
+    project_dirs = [p for p in glob.glob(project_pattern) if os.path.isdir(p)]
+    if project_filter:
+        project_dirs = [
+            p for p in project_dirs
+            if project_filter in os.path.basename(p)
+        ]
+
+    paths = []
+    for project_dir in project_dirs:
+        paths.extend(glob.glob(os.path.join(project_dir, "*.jsonl")))
+        paths.extend(glob.glob(os.path.join(
+            project_dir, "*", "subagents", "*.jsonl")))
+    return paths
+
+
+def project_from_path(path: str, root: str) -> str:
+    try:
+        rel = os.path.relpath(path, root)
+    except ValueError:
+        return short_project(os.path.basename(os.path.dirname(path)) or ".")
+    if rel.startswith(os.pardir + os.sep) or rel == os.pardir:
+        return short_project(os.path.basename(os.path.dirname(path)) or ".")
+    return short_project(rel.split(os.sep)[0])
+
+
 def main() -> None:
-    since = (datetime.fromisoformat(sys.argv[1]).astimezone(timezone.utc)
-             if len(sys.argv) > 1 else default_since())
+    start = time.monotonic()
+    args = parse_args(sys.argv[1:])
+    since = (datetime.fromisoformat(args.since_iso).astimezone(timezone.utc)
+             if args.since_iso else default_since())
     since_iso = since.strftime("%Y-%m-%dT%H:%M:%S")
 
     agg = defaultdict(lambda: defaultdict(int))
@@ -64,13 +133,14 @@ def main() -> None:
     dup_tokens = 0
 
     root = os.path.expanduser("~/.claude/projects")
-    paths = glob.glob(os.path.join(root, "*", "*.jsonl"))
-    paths += glob.glob(os.path.join(root, "*", "*", "subagents", "*.jsonl"))
+    paths = transcript_paths(root, args.project, args.transcript or args.current)
     for path in paths:
-        if os.path.getmtime(path) < since.timestamp():
+        try:
+            if os.path.getmtime(path) < since.timestamp():
+                continue
+        except OSError:
             continue
-        rel = os.path.relpath(path, root)
-        project = short_project(rel.split(os.sep)[0])
+        project = project_from_path(path, root)
         agent_type = None
         if os.sep + "subagents" + os.sep in path:
             agent_type = "(subagent)"
@@ -80,8 +150,14 @@ def main() -> None:
                     agent_type = json.load(mf).get("agentType") or agent_type
             except (OSError, json.JSONDecodeError):
                 pass
-        with open(path, errors="replace") as fh:
+        try:
+            fh = open(path, errors="replace")
+        except OSError:
+            continue
+        with fh:
             for line in fh:
+                if not line_might_matter(line):
+                    continue
                 try:
                     rec = json.loads(line)
                 except json.JSONDecodeError:
@@ -118,6 +194,7 @@ def main() -> None:
 
     if not agg:
         print(f"since {since_iso}Z: no matching records")
+        print(f"elapsed={time.monotonic() - start:.2f}s")
         return
 
     def rollup(keyfn):
@@ -193,6 +270,7 @@ def main() -> None:
               f"sessions) / main-thread share "
               f"{100 * main_tok / all_tok:.0f}% (delegation keeps this "
               f"moderate)")
+    print(f"elapsed={time.monotonic() - start:.2f}s")
 
 
 if __name__ == "__main__":

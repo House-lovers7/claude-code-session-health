@@ -43,6 +43,20 @@ cacheRead  347M   <- 全トークンの95%
 
 すべてローカルのトランスクリプトファイルだけで動きます。**外部送信は一切ありません。**
 
+## Performance notes
+
+Full usage report は `~/.claude/projects/` 配下のローカル transcript を
+サブエージェント分も含めて走査するため、履歴が大きい環境では時間がかかることが
+あります。日常の確認では対象を絞ると速くなります。
+
+```bash
+python3 scripts/usage_report.py --project agent-company-os
+python3 scripts/usage_report.py --current ~/.claude/projects/.../session.jsonl
+python3 scripts/usage_report.py --transcript ~/.claude/projects/.../session.jsonl
+```
+
+将来的には、繰り返しの full report を速くする増分キャッシュを追加する余地があります。
+
 ## セキュリティ / このプラグインが追加するもの
 
 Claude Code のプラグインは commands / hooks / agents / MCP servers を追加できる

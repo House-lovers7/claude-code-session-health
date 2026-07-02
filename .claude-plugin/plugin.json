@@ -1,6 +1,6 @@
 {
   "name": "session-health",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Detects token-wasting Claude Code sessions (context re-read bloat) and closes the loop: nudges the model to compact & delegate, and surfaces 'time to cut' in your statusline and notifications.",
   "author": {
     "name": "Taisuke Goto",
