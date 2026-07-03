@@ -127,6 +127,15 @@ variables — see the header of
 The hook re-fires at most once every 20 requests, and each injection is ~60
 tokens, so the correction itself stays cheap.
 
+## Compaction-aware (v0.3.0)
+
+The request count and cacheRead/output ratio are measured over the **current
+live segment — since the last `/compact`**, not the whole transcript. When you
+compact, the model's live context actually shrinks (measured median ~64% across
+26 real compactions), so the statusline resets (`🔥req231·246x` → `req20·76x`)
+and the hook stops nagging you to compact again. Set
+`SESSION_HEALTH_CUMULATIVE=1` to restore the legacy whole-transcript sum.
+
 ## How this differs from existing tools
 
 Great monitoring tools already exist — [ccusage](https://github.com/ryoppippi/ccusage)

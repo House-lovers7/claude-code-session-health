@@ -117,6 +117,15 @@ notify "応答完了$extra"
 フックの再発火は20リクエストに1回まで、注入は1回約60トークンなので、
 是正コスト自体は安く収まります。
 
+## compaction 対応（v0.3.0）
+
+リクエスト数と cacheRead/output 比は、トランスクリプト全体ではなく
+**最後の `/compact` 以降の「現在の生きたセグメント」**で測ります。`/compact`
+するとモデルの実コンテキストは実際に縮む（実測26件で中央値約64%減）ため、
+statusline はリセットされ（`🔥req231·246x` → `req20·76x`）、フックも圧縮後に
+「また compact しろ」と鳴り続けません。`SESSION_HEALTH_CUMULATIVE=1` で
+従来の全期間集計に戻せます。
+
 ## 既存ツールとの違い
 
 [ccusage](https://github.com/ryoppippi/ccusage)（コストレポート）や

@@ -54,6 +54,10 @@ WARN_RATIO = _env_int("SESSION_HEALTH_WARN_RATIO", 100)
 WARN_RATIO_MIN_REQS = 10
 REWARN_EVERY = _env_int("SESSION_HEALTH_REWARN_EVERY", 20)
 CACHE_DELTA_BYTES = _env_int("SESSION_HEALTH_CACHE_DELTA", 100_000)
+# Reset the counters at each compaction so the figures describe the CURRENT
+# live segment (since the last /compact), which is what /compact actually
+# shrinks. SESSION_HEALTH_CUMULATIVE=1 restores the legacy whole-transcript sum.
+CUMULATIVE = os.environ.get("SESSION_HEALTH_CUMULATIVE", "") == "1"
 FIELDS = ["input_tokens", "output_tokens", "cache_read_input_tokens",
           "cache_creation_input_tokens"]
 STATE_DIR = os.path.expanduser("~/.claude/.state/session-health")
@@ -64,11 +68,28 @@ def scan(transcript_path):
 
     Deduplicates by requestId: streaming writes the same request as multiple
     JSONL records, so summing raw lines would double-count massively.
+
+    Compaction-aware: the counters reset at every ``compact_boundary`` record,
+    so the returned figures describe the CURRENT live segment (since the last
+    /compact) rather than the whole transcript. Without this, req count and the
+    cacheRead/output ratio never fall after a /compact even though the model's
+    live context shrank, so the statusline/hook kept nagging to compact again.
+    Set SESSION_HEALTH_CUMULATIVE=1 to restore the legacy whole-transcript sum.
     """
     reqs = out_tok = cache_rd = 0
     seen = set()
     with open(transcript_path, errors="replace") as fh:
         for line in fh:
+            if not CUMULATIVE and "compact_boundary" in line:
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    rec = None
+                if rec and rec.get("type") == "system" \
+                        and rec.get("subtype") == "compact_boundary":
+                    reqs = out_tok = cache_rd = 0
+                    seen = set()
+                    continue
             if '"assistant"' not in line or '"usage"' not in line:
                 continue
             try:
