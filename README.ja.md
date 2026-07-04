@@ -121,7 +121,7 @@ notify "応答完了$extra"
 
 リクエスト数と cacheRead/output 比は、トランスクリプト全体ではなく
 **最後の `/compact` 以降の「現在の生きたセグメント」**で測ります。`/compact`
-するとモデルの実コンテキストは実際に縮む（実測26件で中央値約64%減）ため、
+するとモデルの実コンテキストは実際に縮む（実測28件で中央値約66%減）ため、
 statusline はリセットされ（`🔥req231·246x` → `req20·76x`）、フックも圧縮後に
 「また compact しろ」と鳴り続けません。`SESSION_HEALTH_CUMULATIVE=1` で
 従来の全期間集計に戻せます。
@@ -171,9 +171,9 @@ main-thread share 89% (delegation keeps this moderate)
 ## 現状と限界
 
 - **一部は計測済みです。** セッション内では、compaction によって実コンテキスト
-  （1リクエストあたり input+cache_read+cache_creation）が実測26件で**中央値64%**
-  縮み、縮小率は圧縮前サイズに単調依存します（Spearman ρ=0.975）。圧縮後フロアは
-  約46〜69kトークンなので、フロアの約2倍未満での早期 `/compact` は得が小さいです。
+  （1リクエストあたり input+cache_read+cache_creation）が実測28件で**中央値66%**
+  縮み、縮小率は圧縮前サイズに単調依存します（Spearman ρ=0.979）。圧縮後フロアは
+  約50〜64kトークンなので、フロアの約2倍未満での早期 `/compact` は得が小さいです。
   [`scripts/compaction_effect.py`](scripts/compaction_effect.py) で再現できます。
   **未検証:** 閉ループ運用での日跨ぎ*集計*コスト傾向。日次のワークロード量が約10倍
   変動するため生の日次%比較は交絡し、正規化した複数日系列が必要です。

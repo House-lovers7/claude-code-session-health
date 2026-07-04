@@ -181,10 +181,20 @@ def mode_statusline(transcript_path, session_id):
     if cached:
         parts = cached.split("\t", 1)
         try:
-            if abs(size - int(parts[0])) < CACHE_DELTA_BYTES:
+            cached_size = int(parts[0])
+            fresh = 0 <= size - cached_size < CACHE_DELTA_BYTES
+            if fresh and size > cached_size and not CUMULATIVE:
+                # A compaction appends a compact_boundary record far smaller
+                # than CACHE_DELTA_BYTES, so a size-only check would keep
+                # showing the stale hot segment. Scan just the appended tail.
+                with open(transcript_path, errors="replace") as fh:
+                    fh.seek(cached_size)
+                    if "compact_boundary" in fh.read():
+                        fresh = False
+            if fresh:
                 print(parts[1] if len(parts) > 1 else "", end="")
                 return
-        except ValueError:
+        except (ValueError, OSError):
             pass
     reqs, out_tok, cache_rd = scan(transcript_path)
     ratio = cache_rd / out_tok if out_tok else 0

@@ -13,7 +13,7 @@ in your statusline and notifications.
 - Measured: one full day of real work (2026-07-02, 12 projects, 2,592 deduplicated requests) — **95% of all tokens were cache reads**, output was 0.4%
 - Root cause: session length — worst sessions ran at a 231–313x cacheRead/output ratio
 - Mechanism: threshold detection → `additionalContext` injection → the model itself starts proposing `/compact` and delegating
-- Status: the closed loop is live; **within-session, `/compact` cuts live context a median 64%** (26 real compactions, monotonic with pre-compaction size). Reproduce with [`scripts/compaction_effect.py`](scripts/compaction_effect.py). The multi-day *aggregate* cost trend is still being measured.
+- Status: the closed loop is live; **within-session, `/compact` cuts live context a median 66%** (28 real compactions, monotonic with pre-compaction size). Reproduce with [`scripts/compaction_effect.py`](scripts/compaction_effect.py). The multi-day *aggregate* cost trend is still being measured.
 
 ## The problem
 
@@ -131,8 +131,8 @@ tokens, so the correction itself stays cheap.
 
 The request count and cacheRead/output ratio are measured over the **current
 live segment — since the last `/compact`**, not the whole transcript. When you
-compact, the model's live context actually shrinks (measured median ~64% across
-26 real compactions), so the statusline resets (`🔥req231·246x` → `req20·76x`)
+compact, the model's live context actually shrinks (measured median ~66% across
+28 real compactions), so the statusline resets (`🔥req231·246x` → `req20·76x`)
 and the hook stops nagging you to compact again. Set
 `SESSION_HEALTH_CUMULATIVE=1` to restore the legacy whole-transcript sum.
 
@@ -182,9 +182,9 @@ this moderate)
 ## Status & limitations
 
 - **Partially measured.** Within-session, compaction cuts the live context
-  (input+cache_read+cache_creation per request) a **median 64%** across 26 real
+  (input+cache_read+cache_creation per request) a **median 66%** across 28 real
   compactions, and the drop scales monotonically with pre-compaction size
-  (Spearman ρ=0.975); the post-compaction floor is ~46–69k tokens, so an early
+  (Spearman ρ=0.979); the post-compaction floor is ~50–64k tokens, so an early
   `/compact` below ~2× that floor buys little. Reproduce with
   [`scripts/compaction_effect.py`](scripts/compaction_effect.py). **Still open:**
   the multi-day *aggregate* cost trend under the closed loop — daily workload

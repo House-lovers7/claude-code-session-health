@@ -131,6 +131,7 @@ def main() -> None:
     api_errors = defaultdict(int)
     seen_req = set()
     dup_tokens = 0
+    no_timestamp = 0
 
     root = os.path.expanduser("~/.claude/projects")
     paths = transcript_paths(root, args.project, args.transcript or args.current)
@@ -163,6 +164,11 @@ def main() -> None:
                 except json.JSONDecodeError:
                     continue
                 ts = rec.get("timestamp") or ""
+                if not ts:
+                    # A usage record without a timestamp cannot be assigned to
+                    # the window; count it so the drop is visible, not silent.
+                    no_timestamp += 1
+                    continue
                 if ts[:19] < since_iso:
                     continue
                 sess = rec.get("sessionId") or os.path.basename(path)[:8]
@@ -219,6 +225,9 @@ def main() -> None:
 
     print(f"since {since_iso}Z (local {since.astimezone():%m/%d %H:%M})  "
           f"deduplicated away: {fmt(dup_tokens)} tok")
+    if no_timestamp:
+        print(f"warning: {no_timestamp} usage records had no timestamp and "
+              f"were excluded from the window")
 
     header("By project")
     proj = rollup(lambda k: k[0])
