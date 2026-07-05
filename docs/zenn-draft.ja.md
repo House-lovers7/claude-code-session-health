@@ -1,4 +1,4 @@
-# Claude Fable 5のTokenを溶かす犯人が実証により判明、outputではなくcache readだった
+# Claude Fable 5のトークンを溶かす犯人が実証で判明 — outputではなくcache readだった
 
 > **2026-07-05 全面改稿**: 初出（7/2）から追記を2回重ねた時系列構成を、実測が出そろった時点で体系構成に整理し直しました。数値はすべて全日確定値に更新しています。速報時の経緯や生データは、リポジトリの `docs/verification-2026-07-04.md` / `docs/verification-2026-07-05.md` に残してあります。
 
