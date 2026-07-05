@@ -13,7 +13,7 @@ in your statusline and notifications.
 - Measured: one full day of real work (2026-07-02, 12 projects, 2,592 deduplicated requests) — **95% of all tokens were cache reads**, output was 0.4%
 - Root cause: session length — worst sessions ran at a 231–313x cacheRead/output ratio
 - Mechanism: threshold detection → `additionalContext` injection → the model itself starts proposing `/compact` and delegating
-- Status: the closed loop is live; **within-session, `/compact` cuts live context a median 66%** (28 real compactions, monotonic with pre-compaction size). Reproduce with [`scripts/compaction_effect.py`](scripts/compaction_effect.py). The multi-day *aggregate* cost trend is still being measured.
+- Status: the closed loop is live; **within-session, `/compact` cuts live context a median 66%** (29 real compactions, monotonic with pre-compaction size). Reproduce with [`scripts/compaction_effect.py`](scripts/compaction_effect.py). Across days, a workload-normalized 4-day series shows the **per-session median cacheRead/output ratio falling monotonically 233x → 83x** after the loop went live — while the raw cache-read share (~94%) and the hot-session rate did not improve ([details](docs/verification-2026-07-05.md)).
 
 ## The problem
 
@@ -182,14 +182,19 @@ this moderate)
 ## Status & limitations
 
 - **Partially measured.** Within-session, compaction cuts the live context
-  (input+cache_read+cache_creation per request) a **median 66%** across 28 real
+  (input+cache_read+cache_creation per request) a **median 66%** across 29 real
   compactions, and the drop scales monotonically with pre-compaction size
-  (Spearman ρ=0.979); the post-compaction floor is ~50–64k tokens, so an early
+  (Spearman ρ=0.977); the post-compaction floor is ~50–64k tokens, so an early
   `/compact` below ~2× that floor buys little. Reproduce with
-  [`scripts/compaction_effect.py`](scripts/compaction_effect.py). **Still open:**
-  the multi-day *aggregate* cost trend under the closed loop — daily workload
-  varies ~10×, so raw day-over-day percentages are confounded and need a
-  normalized multi-day series.
+  [`scripts/compaction_effect.py`](scripts/compaction_effect.py). Across days,
+  a workload-normalized 4-day series
+  ([docs/verification-2026-07-05.md](docs/verification-2026-07-05.md)) shows the
+  per-session median cacheRead/output ratio falling monotonically
+  **233x → 130x → 110x → 83x** after the loop went live — even as sessions got
+  *longer* (median 2 → 59 requests), which would normally push the ratio up.
+  Honest caveats: the raw cache-read share (~94%) and the hot-session rate did
+  **not** improve, and with n=4 days / one user, this is consistency evidence,
+  not proof of causality.
 - The analysis relies on undocumented transcript internals (JSONL record
   shape, the `subagents/` layout). Verified against Claude Code as of
   2026-07-02; a future Claude Code update may require changes here.
