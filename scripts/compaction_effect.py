@@ -108,9 +108,11 @@ def main() -> int:
             print(f"{trig},{pre},{dur},{mb:.0f},{ma:.0f},{drop(mb, ma):.0f},{proj}")
         return 0
 
-    print(f"{'project':34s} {'trig':7s} {'preTok':>8s} {'ctx_before':>11s} {'ctx_after':>10s} {'drop%':>6s}")
+    print(f"{'project':34s} {'trig':7s} {'preTok':>8s} {'ctx_before':>11s}"
+          f" {'ctx_after':>10s} {'drop%':>6s}")
     for trig, pre, dur, mb, ma, proj in sorted(events, key=lambda e: -(e[1] or 0)):
-        print(f"{proj:34s} {str(trig):7s} {str(pre):>8s} {mb:>11.0f} {ma:>10.0f} {drop(mb, ma):>5.0f}%")
+        print(f"{proj:34s} {str(trig):7s} {str(pre):>8s} {mb:>11.0f}"
+              f" {ma:>10.0f} {drop(mb, ma):>5.0f}%")
 
     drops = [drop(mb, ma) for _, _, _, mb, ma, _ in events]
     floors = [ma for _, _, _, _, ma, _ in events]
